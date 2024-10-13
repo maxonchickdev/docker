@@ -20,10 +20,10 @@ endif ()
 include(cmake/CompilerWarnings.cmake)
 
 #! Project main executable source compilation
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/cgroups_setup.cpp src/user_ns_setup.cpp src/mount_ns_setup.cpp)
 
 #! Put path to your project headers
-#target_include_directories(${PROJECT_NAME} PRIVATE options_parser)
+target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 #find_package(Boost 1.71.0 COMPONENTS program_options system REQUIRED)
 #target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
