@@ -1,4 +1,4 @@
-#include "mount_ns_setup.h"
+#include "container.h"
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mount.h>
@@ -6,22 +6,21 @@
 #include <cerrno>
 #include <cstring>
 
-void setup_mount_ns(const std::string& mount_point) {
-    std::string mount_p_path = MNT_PATH + mount_point;
+void Container::setup_mount_ns() {
 
-    if (mkdir(mount_p_path.c_str(), 0775) == -1 && errno != EEXIST) {
+    if (mkdir(sources_path.c_str(), 0775) == -1 && errno != EEXIST) {
         std::cerr << "Failed to create a mount point directory: " << strerror(errno) << '\n';
         exit(1);
     }
 
-    std::string fs_path = MINIFS_PATH;
-    if (mount(fs_path.c_str(), mount_p_path.c_str(), "ext4", MS_BIND, "") != 0) {
+    if (mount(sources_path.c_str(), sources_path.c_str(), "ext4", MS_BIND, "") != 0) {
         std::cerr << "Failed to mount a filesystem: " << strerror(errno) << '\n';
         exit(1);
     }
 
-    if (chdir(mount_p_path.c_str()) != 0) {
-        std::cerr << "Failed to enter a mount point: " << strerror(errno) << '\n';
+    if (chdir(sources_path.c_str()) != 0) {
+        std::cerr << "Failed to enter a mount point: " << strerror
+        (errno) << '\n';
         exit(1);
     };
 
