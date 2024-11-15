@@ -1,9 +1,9 @@
-#include "user_ns_setup.h"
+#include "container.h"
 #include <fstream>
 #include <cerrno>
 #include <cstring>
 
-void setup_user_ns(int user_id, pid_t comm_pid) {
+void Container::setup_user_ns(int user_id, pid_t comm_pid) {
     std::ofstream uid_m_fd("/proc/" + std::to_string(comm_pid) + "/uid_map");
     if (uid_m_fd.is_open()) {
         uid_m_fd << "0 " + std::to_string(user_id) + " 1\n";

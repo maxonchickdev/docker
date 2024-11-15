@@ -1,21 +1,23 @@
-#include "cgroups_setup.h"
+#include "container.h"
 #include <fstream>
 #include <sys/stat.h>
 #include <cerrno>
 #include <cstring>
 
-void setup_cgroup(const std::string& cg_name) {
-    std::string cg_path = CG_PATH + cg_name;
+
+std::string Container::setup_cgroup() {
+    std::string cg_path = std::string(CG_PATH) + "/" + containerID;
 
     if (mkdir(cg_path.c_str(), 0775) == -1 && errno != EEXIST) {
         std::cerr << "Failed to create a cgroup: " << strerror(errno) << '\n';
         exit(1);
     }
+    return cg_path;
 }
 
-void set_max_pid(const std::string& cg_name, pid_t comm_pid, size_t num_of_procs) {
-    std::string procs_file_path = CG_PATH + cg_name + "/cgroup.procs";
-    std::string pids_max_file_path = CG_PATH + cg_name + "/pids.max";
+void Container::set_max_pid(pid_t comm_pid) {
+    std::string procs_file_path = std::string(CG_PATH) + "/" + containerID + "/cgroup.procs";
+    std::string pids_max_file_path = std::string(CG_PATH) + "/" + containerID + "/pids.max";
     std::ofstream procs_fd(procs_file_path);
     if (procs_fd.is_open()) {
         procs_fd << comm_pid;
