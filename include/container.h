@@ -4,8 +4,6 @@
 #include <string>
 #include <iostream>
 #define STACK_SIZE (1024 * 1024)
-#define MNT_PATH "/home/zahar_kohut/mydocker"
-#define TEMPLATE_PATH "/home/zahar_kohut/mydocker/minifs"
 #define CG_PATH "/sys/fs/cgroup"
 
 

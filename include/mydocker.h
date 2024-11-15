@@ -15,7 +15,7 @@ private:
     std::string generateContainerID();
 
 public:
-    Docker(const std::string& baseDir = "/home/zahar_kohut/mydocker");
+    Docker(const std::string& baseDir = MNT_PATH);
     ~Docker();
 
     void initialize();

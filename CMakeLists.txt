@@ -37,6 +37,10 @@ INSTALL(PROGRAMS
 
 # Define ALL_TARGETS variable to use in PVS and Sanitizers
 set(ALL_TARGETS ${PROJECT_NAME})
+set(MNT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/containers")
+set(TEMPLATE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/images/minifs")
+add_compile_definitions(MNT_PATH="${MNT_PATH}")
+add_compile_definitions(TEMPLATE_PATH="${TEMPLATE_PATH}")
 
 # Include CMake setup
 include(cmake/main-config.cmake)
