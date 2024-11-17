@@ -41,7 +41,6 @@ int Container::command_process(void* arg) {
         std::cerr << "Failed to close reading end of pipe in child!" << '\n';
         exit(1);
     }
-
     ref->setup_mount_ns();
 
     if (setgid(0) == -1) {
@@ -68,7 +67,7 @@ int Container::spawn_process(int (*commproc)(void *), void *arg_for_commproc) {
 }
 
 
-Container::Container(std::string id, bool is_new, std::string num_of_procs): containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), isRunning(false) {
+Container::Container(std::string id, bool is_new, std::vector<std::string> local_folders, std::string num_of_procs): containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), isRunning(false), local_folders(std::move(local_folders)) {
     if (pipe(p_fd) == -1) {
         std::cerr << "Failed to create pipe!" << '\n';
         exit(1);
@@ -110,10 +109,9 @@ void Container::run() {
     }
 
     if (waitpid(comm_pid, nullptr, 0) == -1) {
-        std::cerr << "Failed to to wait for child:" << strerror(errno) << '\n';
+        std::cerr << "Failed to wait for child:" << strerror(errno) << '\n';
         exit(1);
     }
-    exit(0);
 }
 void stop();
 void deleteResources();

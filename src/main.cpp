@@ -4,7 +4,8 @@
 int main(int argc, char* argv[]) {
     std::string id = "1";
     std::string no_procs = "5";
-    Container cntnr = Container(id, true, no_procs);
+    std::vector<std::string> lclfld{"/home/zahar_kohut/test", "/home/zahar_kohut/test2"};
+    Container cntnr = Container(id, true, lclfld, no_procs);
     cntnr.run();
     return 0;
 }

@@ -3,7 +3,10 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 #define STACK_SIZE (1024 * 1024)
+#define MNT_PATH "/home/zahar_kohut/mydocker"
+#define TEMPLATE_PATH "/home/zahar_kohut/mydocker/minifs"
 #define CG_PATH "/sys/fs/cgroup"
 
 
@@ -14,6 +17,7 @@ private:
     std::string cgroup_path;
     std::string sources_path;
     std::string num_of_procs;
+    std::vector<std::string> local_folders;
     bool isRunning;
 
     static void* create_stack();
@@ -28,7 +32,7 @@ private:
 
 
 public:
-    Container(std::string id, bool is_new, std::string num_of_procs = "max");
+    Container(std::string id, bool is_new, std::vector<std::string> local_folders = {}, std::string num_of_procs = "max");
     void initialize();
     void run();
     void stop();

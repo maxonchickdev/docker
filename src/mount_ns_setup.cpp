@@ -19,8 +19,7 @@ void Container::setup_mount_ns() {
     }
 
     if (chdir(sources_path.c_str()) != 0) {
-        std::cerr << "Failed to enter a mount point: " << strerror
-        (errno) << '\n';
+        std::cerr << "Failed to enter a mount point: " << strerror(errno) << '\n';
         exit(1);
     };
 
@@ -48,6 +47,19 @@ void Container::setup_mount_ns() {
     if (mount("proc", "/proc", "proc", 0, "") != 0) {
         std::cerr << "Failed to mount a proc filesystem: " << strerror(errno) << '\n';
         exit(1);
+    }
+
+    for (const auto& path : local_folders) {
+        std::string folder_name = path.substr(path.find_last_of('/') + 1);
+        if (mkdir(folder_name.c_str(), 0775) == -1 && errno != EEXIST) {
+            std::cerr << "Failed to create directory for " << folder_name << ": " << strerror(errno) << '\n';
+            exit(1);
+        }
+        std::string old_path = "/put_old" + path;
+        if (mount(old_path.c_str(), folder_name.c_str(), "ext4", MS_BIND, "") != 0) {
+            std::cerr << "Failed to mount " << old_path << " to " << folder_name << ": " << strerror(errno) << '\n';
+            exit(1);
+        }
     }
 
     if (umount2(put_old.c_str(), MNT_DETACH) != 0) {
