@@ -53,12 +53,13 @@ void Container::setup_mount_ns() {
         std::string folder_name = path.substr(path.find_last_of('/') + 1);
         if (mkdir(folder_name.c_str(), 0775) == -1 && errno != EEXIST) {
             std::cerr << "Failed to create directory for " << folder_name << ": " << strerror(errno) << '\n';
-            exit(1);
+            continue;
         }
         std::string old_path = "/put_old" + path;
         if (mount(old_path.c_str(), folder_name.c_str(), "ext4", MS_BIND, "") != 0) {
             std::cerr << "Failed to mount " << old_path << " to " << folder_name << ": " << strerror(errno) << '\n';
-            exit(1);
+            rmdir(folder_name.c_str());
+            continue;
         }
     }
 
