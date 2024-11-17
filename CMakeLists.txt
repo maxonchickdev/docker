@@ -22,14 +22,15 @@ include(cmake/CompilerWarnings.cmake)
 #! Project main executable source compilation
 add_executable(${PROJECT_NAME} src/main.cpp src/cgroups_setup.cpp src/user_ns_setup.cpp src/mount_ns_setup.cpp
 		src/container.cpp
+		src/mydocker.cpp
 		src/init.cpp)
 
 #! Put path to your project headers
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
-#find_package(Boost 1.71.0 COMPONENTS program_options system REQUIRED)
-#target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
-#target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
+find_package(Boost 1.71.0 COMPONENTS program_options system REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
 
 INSTALL(PROGRAMS
 		$<TARGET_FILE:${PROJECT_NAME}> # ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}
