@@ -1,8 +1,9 @@
 # Project: mini-docker
-Authors (team): Max Kutsenko, Zahar Kohut, Serhii Dmytryshyn, Maxym Kutsenko<br>
+Authors (team): Zahar Kohut, Serhii Dmytryshyn, Maxym Kutsenko, Bohdan Ozarko<br>
+
 ## Prerequisites
 
-<mark>g++, cmake</mark>
+g++, cmake
 
 ### Compilation
 
