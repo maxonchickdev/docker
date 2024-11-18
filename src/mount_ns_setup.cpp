@@ -5,6 +5,7 @@
 #include <syscall.h>
 #include <cerrno>
 #include <cstring>
+#include <filesystem>
 
 void Container::setup_mount_ns() {
 
@@ -52,12 +53,18 @@ void Container::setup_mount_ns() {
 
 
     for (const auto& path : local_folders) {
+        std::string old_path = "/put_old" + path;
+        std::filesystem::path dir_path(old_path);
+        std::cout << dir_path.string() << '\n';
+        if (!std::filesystem::is_directory(dir_path)) {
+            std::cerr << path << " is not a valid directory path." << '\n';
+            continue;
+        };
         std::string folder_name = path.substr(path.find_last_of('/') + 1);
         if (mkdir(folder_name.c_str(), 0775) == -1 && errno != EEXIST) {
             std::cerr << "Failed to create directory for " << folder_name << ": " << strerror(errno) << '\n';
             continue;
         }
-        std::string old_path = "/put_old" + path;
         if (mount(old_path.c_str(), folder_name.c_str(), "ext4", MS_BIND, "") != 0) {
             std::cerr << "Failed to mount " << old_path << " to " << folder_name << ": " << strerror(errno) << '\n';
             rmdir(folder_name.c_str());

@@ -23,7 +23,8 @@ include(cmake/CompilerWarnings.cmake)
 add_executable(${PROJECT_NAME} src/main.cpp src/cgroups_setup.cpp src/user_ns_setup.cpp src/mount_ns_setup.cpp
 		src/container.cpp
 		src/mydocker.cpp
-		src/init.cpp)
+		src/init.cpp
+		src/config_parser.cpp)
 
 #! Put path to your project headers
 target_include_directories(${PROJECT_NAME} PRIVATE include)

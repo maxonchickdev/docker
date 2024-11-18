@@ -1,5 +1,5 @@
 #include "container.h"
-
+#include <filesystem>
 
 void* Container::create_stack() {
     void* stack;
@@ -60,16 +60,17 @@ int Container::spawn_process(int (*commproc)(void *), void *arg_for_commproc) {
     return clone(commproc, stack, clone_flags, arg_for_commproc);
 }
 
-
-Container::Container(std::string id, bool is_new, std::vector<std::string> local_folders, std::string num_of_procs, std::string img):
-containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), isRunning(false), local_folders(std::move(local_folders)), img(std::move(img)) {
+Container::Container(std::string id, bool is_new, std::vector<std::string> local_folders, std::string num_of_procs, std::string max_memory, std::string img):
+containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), max_memory(std::move(max_memory)), isRunning(true), local_folders(std::move(local_folders)), img(std::move(img)) {
     if (pipe(p_fd) == -1) {
         std::cerr << "Failed to create pipe!" << '\n';
         exit(1);
     }
     if (is_new) {
+        isRunning = false;
         initialize();
     } else {
+        isRunning = false;
         sources_path = std::string(MNT_PATH) + "/" + containerID;
         cgroup_path = std::string(CG_PATH) + "/" + containerID;
     }
@@ -87,7 +88,10 @@ void Container::run() {
         std::cerr << "Failed to clone process:" << strerror(errno) << '\n';
         exit(1);
     }
-    set_max_pid(comm_pid);
+
+    add_to_cgroup(comm_pid);
+    set_max_pid();
+    set_max_memory();
     cntr_pid = comm_pid;
     int user_id = 1000;
     setup_user_ns(user_id, comm_pid);
@@ -101,6 +105,7 @@ void Container::run() {
         std::cerr << "Failed writing to pipe!" << '\n';
         exit(1);
     } else {
+        isRunning = true;
         std::cout << "Setup finished!" << '\n';
     }
 
@@ -108,7 +113,7 @@ void Container::run() {
         std::cerr << "Failed to close writing end of pipe in parent!" << '\n';
         exit(1);
     }
-    isRunning = true;
+
 }
 
 

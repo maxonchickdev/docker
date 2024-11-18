@@ -27,7 +27,7 @@ public:
     void start_server(int port);
     void process_command(const std::string& cmd, int client_socket);
 
-    void create_container(std::string& image);
+    void create_container(std::string& cfg, bool is_new);
     void run_container(const std::string& containerID, int client_socket);
     void stop_container(const std::string& id);
     void list_containers();
