@@ -45,7 +45,9 @@ std::string Container::create_system(const std::string& source_path) {
 }
 
 void Container::initialize() {
-    sources_path = create_system(std::string(TEMPLATE_PATH));
+    std::string path = std::string(TEMPLATE_PATH) + "/" + img;
+    std::cout << path << "\n";
+    sources_path = create_system(path);
     cgroup_path = setup_cgroup();
 }
 

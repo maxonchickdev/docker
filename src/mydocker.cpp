@@ -21,21 +21,20 @@ void MyDocker::start_server(int port) {
     }
 
     std::cout << "Server is listening on port " << port << std::endl;
-
 }
 
 
 void MyDocker::run_server() {
     static const int BUFFER_SIZE = 1024;
-    struct sockaddr_in address;
+    struct sockaddr_in address{};
     char buff[BUFFER_SIZE];
-    int adrlen = sizeof(address);
-
-    while (true) {
+    int len = sizeof(address);
+    alive = true;
+    while (alive) {
         std::cout << "Waiting for connection..." << std::endl;
 
         int client_socket;
-        if ((client_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&adrlen)) < 0) {
+        if ((client_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&len)) < 0) {
             std::cerr << "Accept failed" << std::endl;
             continue;
         }
@@ -44,9 +43,9 @@ void MyDocker::run_server() {
 
         while (true) {
             memset(buff, 0, BUFFER_SIZE);
-            int bytes_read = read(client_socket, buff, BUFFER_SIZE);
+            ssize_t bytes_read = read(client_socket, buff, BUFFER_SIZE);
 
-            if (bytes_read <= 0) {
+            if (bytes_read == 0) {
                 std::cout << "Client disconnected" << std::endl;
                 break;
             }
@@ -64,6 +63,7 @@ void MyDocker::run_server() {
 
 void MyDocker::process_command(const std::string& cmd, int client_socket) {
     std::vector<std::string> args;
+    std::string image;
     boost::split(args, cmd, boost::is_any_of(" "));
     if (args[0] == "mydocker") {
         std::string response;
@@ -72,7 +72,7 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
             case 1:
                 response = "Starting container\n";
                 send(client_socket, response.c_str(), response.length(), 0);
-                run_container("CONTAINERID", client_socket);
+                run_container(args[2], client_socket);
                 break;
             case 2:
                 response = "Stopping container\n";
@@ -80,13 +80,23 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
 //                stop_container("CONTAINERID");
 //            close(container_pipe[1]); implement
                 break;
+            case 3:
+                list_containers();
+                break;
+            case 4:
+                image = "alp_minifs";
+                create_container(image);
+                break;
+            case 6:
+                alive = false;
+                break;
             default:
                 response = "Wrong command\n";
                 send(client_socket, response.c_str(), response.length(), 0);
                 break;
         }
     } else if (running_containers > 0){
-        write(cntr_pipe[1], (cmd + "\n").c_str(), cmd.length() + 1);
+        int w = write(cntr_pipe[1], (cmd + "\n").c_str(), cmd.length() + 1);
 
         if (cmd == "exit") {
             close(cntr_pipe[1]);
@@ -101,21 +111,57 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
 
 }
 
-void MyDocker::run_container(const std::string& containerID, int client_socket) {
+void MyDocker::run_container(const std::string& id, int client_socket) {
+    if (!(containers.find(id) != containers.end())) {
+        std::string msg = "No such container.\n";
+        send(client_socket, msg.c_str(), msg.length(), 0);
+        return;
+    }
 
     if (pipe(cntr_pipe) == -1) {
-        throw std::runtime_error("Failed to create pipe");
+        std::string msg = "Error while creating pipe.\n";
+        send(client_socket, msg.c_str(), msg.length(), 0);
+        return;
     }
 
     dup2(cntr_pipe[0], STDIN_FILENO);
     dup2(client_socket, STDOUT_FILENO);
     dup2(client_socket, STDERR_FILENO);
 
-    std::string c_id = "4";
-    std::string n_pr = "5";
-    Container cntnr = Container(c_id, true, n_pr);
+    Container cntnr = containers.at(id);
+    std::cout << "Started container: " << cntnr.getID() << "\n";
     cntnr.run();
     running_containers++;
-
-    std::cout << "started: " << cntnr.get_PID() << "\n";
 }
+
+void MyDocker::create_container(std::string& image) {
+    bool valid = false;
+    for (std::string i : IMAGES) {
+        if (i == image) {
+            valid = true;
+            break;
+        }
+    }
+    if (valid) {
+        std::string c_id = "2";
+        std::string n_pr = "5";
+        std::vector<std::string> lclfld{"/home/serhii/test", "/home/serhii/test2"};
+        Container cntnr = Container(c_id, true, lclfld, n_pr, image);
+        std::cout << "Created container with ID: " << c_id << "\n";
+        containers.emplace(c_id, cntnr);
+    } else {
+        std::cout << "Select from images:\n";
+        for (std::string i : IMAGES) {
+            std::cout << i << " ";
+        }
+        std::cout << "\n";
+    }
+}
+
+void MyDocker::list_containers() {
+    std::cout << "Your containers: \n";
+    for (auto& [id, container] : containers) {
+        std::cout << "Container id: " << id << std::endl;
+    }
+}
+

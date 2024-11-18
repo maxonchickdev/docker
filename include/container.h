@@ -3,18 +3,38 @@
 
 #include <string>
 #include <iostream>
+#include <sstream>
+#include <cstring>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <netinet/in.h>
+#include <sched.h>
+#include "vector"
+#include <fstream>
+#include <map>
+#include <unordered_map>
+#include <sys/mman.h>
+#include <cerrno>
+#include <utility>
+#include <csignal>
+
+
 #define STACK_SIZE (1024 * 1024)
 #define CG_PATH "/sys/fs/cgroup"
-
+#define IMAGES {"alp_minifs", "alp_minifs_extend"}
 
 class Container {
 private:
     int p_fd[2];
+    std::string img;
     std::string containerID;
     std::string cgroup_path;
     std::string sources_path;
     std::string num_of_procs;
+    std::vector<std::string> local_folders;
     bool isRunning;
+    pid_t cntr_pid;
 
     static void* create_stack();
     std::string setup_cgroup();
@@ -28,14 +48,15 @@ private:
 
 
 public:
-    Container(std::string id, bool is_new, std::string num_of_procs = "max");
+    Container(std::string id, bool is_new, std::vector<std::string> local_folders = {}, std::string num_of_procs = "max", std::string img = "alp_minifs");
     void initialize();
     void run();
     void stop();
-    void deleteResources();
+    void remove();
 
     std::string getID() const;
-    bool isContainerRunning() const;
+    pid_t get_PID() const;
+    bool get_status() const;
 };
 
 #endif // CONTAINER_HPP
