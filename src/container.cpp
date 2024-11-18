@@ -1,12 +1,5 @@
-#include <string>
 #include "container.h"
-#include <iostream>
-#include <sys/mman.h>
-#include <sys/wait.h>
-#include <cerrno>
-#include <cstring>
-#include <utility>
-
+#include <filesystem>
 
 void* Container::create_stack() {
     void* stack;
@@ -67,28 +60,39 @@ int Container::spawn_process(int (*commproc)(void *), void *arg_for_commproc) {
     return clone(commproc, stack, clone_flags, arg_for_commproc);
 }
 
-
-Container::Container(std::string id, bool is_new, std::string num_of_procs): containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), isRunning(false) {
+Container::Container(std::string id, bool is_new, std::vector<std::string> local_folders, std::string num_of_procs, std::string max_memory, std::string img):
+containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), max_memory(std::move(max_memory)), isRunning(true), local_folders(std::move(local_folders)), img(std::move(img)) {
     if (pipe(p_fd) == -1) {
         std::cerr << "Failed to create pipe!" << '\n';
         exit(1);
     }
     if (is_new) {
+        isRunning = false;
         initialize();
     } else {
+        isRunning = false;
         sources_path = std::string(MNT_PATH) + "/" + containerID;
         cgroup_path = std::string(CG_PATH) + "/" + containerID;
     }
 }
 
 void Container::run() {
+    if (pipe(p_fd) == -1) {
+        std::cerr << "Failed to create pipe!" << '\n';
+        exit(1);
+    }
+
     pid_t comm_pid = spawn_process(&Container::command_process, this);
 
     if (comm_pid < 0) {
         std::cerr << "Failed to clone process:" << strerror(errno) << '\n';
         exit(1);
     }
-    set_max_pid(comm_pid);
+
+    add_to_cgroup(comm_pid);
+    set_max_pid();
+    set_max_memory();
+    cntr_pid = comm_pid;
     int user_id = 1000;
     setup_user_ns(user_id, comm_pid);
 
@@ -101,6 +105,7 @@ void Container::run() {
         std::cerr << "Failed writing to pipe!" << '\n';
         exit(1);
     } else {
+        isRunning = true;
         std::cout << "Setup finished!" << '\n';
     }
 
@@ -109,18 +114,58 @@ void Container::run() {
         exit(1);
     }
 
-    if (waitpid(comm_pid, nullptr, 0) == -1) {
-        std::cerr << "Failed to to wait for child:" << strerror(errno) << '\n';
-        exit(1);
-    }
-    exit(0);
 }
-void stop();
-void deleteResources();
+
+
+void Container::stop() {
+    std::string line;
+    std::vector<pid_t> pids;
+    std::ifstream procs(CG_PATH "/" +containerID + "/cgroup.procs");
+
+    if (!procs.is_open()) {
+        std::cerr << "Failed to open /cgroup.procs" << std::endl;
+        return;
+    }
+
+    while (std::getline(procs, line)) {
+        pids.push_back(static_cast<pid_t>(std::stol(line)));
+    }
+    procs.close();
+
+    for (pid_t pid : pids) {
+        if (kill(pid, SIGKILL) != 0) {
+            std::cerr << "Failed to kill process " << pid << ": " << strerror(errno) << std::endl;
+            return;
+        }
+    }
+}
+
+void Container::remove() {
+    if (isRunning) {
+        std::cerr << "Container is running"<< '\n';
+        return;
+    }
+
+    std::string pth1 = "/sys/fs/cgroup/" + containerID;
+    std::string cmd2 = "sudo rm -rf " MNT_PATH "/" + containerID;
+    std::string pth2 = MNT_PATH "/" + containerID;
+
+    rmdir(pth1.c_str());
+
+    // change it
+    if (!system(cmd2.c_str())) {
+//        std::cerr << "Failed delete container wtih ID: " << containerID << ". " << strerror(errno) << '\n';
+    }
+}
 
 std::string Container::getID() const {
     return containerID;
 }
-bool Container::isContainerRunning() const {
+
+pid_t Container::get_PID() const {
+    return cntr_pid;
+}
+
+bool Container::get_status() const {
     return isRunning;
 }
