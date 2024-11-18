@@ -14,8 +14,10 @@ g++, cmake, boost
 ### Usage
 
 Start server:
+```
 sudo ./bin/mydocker2 <port>
-<mark>sudo is important!<mark><br>
+```
+<mark>sudo is important! it is necessary for cgroups to work. <br></mark>
 Connect to server:
 ```
 nc localhost <port>
