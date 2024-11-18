@@ -113,20 +113,26 @@ void Container::run() {
 
 
 void Container::stop() {
-    if (kill(cntr_pid, SIGTERM) == -1) {
-        std::cerr << "Failed to stop container: " << strerror(errno) << '\n';
-    } else {
-        std::cout << "Container stopped!" << '\n';
-        isRunning = false;
+    std::string line;
+    std::vector<pid_t> pids;
+    std::ifstream procs(CG_PATH "/" +containerID + "/cgroup.procs");
+
+    if (!procs.is_open()) {
+        std::cerr << "Failed to open /cgroup.procs" << std::endl;
+        return;
     }
 
-//    if (kill(cntr_pid, SIGTERM) == -1) {
-//        std::cerr << "Failed to send SIGTERM to container: " << strerror(errno) << '\n';
-//        // If SIGTERM fails, try SIGKILL as a last resort
-//        if (kill(cntr_pid, SIGKILL) == -1) {
-//            std::cerr << "Failed to send SIGKILL to container: " << strerror(errno) << '\n';
-//        }
-//    }
+    while (std::getline(procs, line)) {
+        pids.push_back(static_cast<pid_t>(std::stol(line)));
+    }
+    procs.close();
+
+    for (pid_t pid : pids) {
+        if (kill(pid, SIGKILL) != 0) {
+            std::cerr << "Failed to kill process " << pid << ": " << strerror(errno) << std::endl;
+            return;
+        }
+    }
 }
 
 void Container::remove() {
@@ -134,15 +140,17 @@ void Container::remove() {
         std::cerr << "Container is running"<< '\n';
         return;
     }
-    std::string cmd1 = "sudo rmdir /sys/fs/cgroup/" + containerID;
-    if (!system(cmd1.c_str())){
-        std::cerr << "Failed delete cgroups: " << strerror(errno) << '\n';
-    }
-    std::string cmd2 = "sudo rm -rf " MNT_PATH  "/" + containerID;
-    if (!system(cmd2.c_str())) {
-        std::cerr << "Failed delete container wtih ID: " << containerID << ". " << strerror(errno) << '\n';
-    }
 
+    std::string pth1 = "/sys/fs/cgroup/" + containerID;
+    std::string cmd2 = "sudo rm -rf " MNT_PATH "/" + containerID;
+    std::string pth2 = MNT_PATH "/" + containerID;
+
+    rmdir(pth1.c_str());
+
+    // change it
+    if (!system(cmd2.c_str())) {
+//        std::cerr << "Failed delete container wtih ID: " << containerID << ". " << strerror(errno) << '\n';
+    }
 }
 
 std::string Container::getID() const {

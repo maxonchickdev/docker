@@ -41,7 +41,7 @@ void MyDocker::run_server() {
 
         std::cout << "Client connected: " << client_socket << std::endl;
 
-        while (true) {
+        while (alive) {
             memset(buff, 0, BUFFER_SIZE);
             ssize_t bytes_read = read(client_socket, buff, BUFFER_SIZE);
 
@@ -65,9 +65,14 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
     std::vector<std::string> args;
     std::string image;
     boost::split(args, cmd, boost::is_any_of(" "));
-    if (args[0] == "mydocker") {
+    if (args[0] == "mydocker" && args.size() <= 3) {
         std::string response;
         int cmd_no = my_commands[args[1]];
+        if (args[2].empty() && (cmd_no != 3 && cmd_no != 6 && cmd_no != 0)) {
+            std::cout << "cmd_no " <<cmd_no <<"\n";
+            std::cout << "select container id " <<"\n";
+            return;
+        }
         switch (cmd_no){
             case 1:
                 response = "Starting container\n";
@@ -77,8 +82,7 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
             case 2:
                 response = "Stopping container\n";
                 send(client_socket, response.c_str(), response.length(), 0);
-//                stop_container("CONTAINERID");
-//            close(container_pipe[1]); implement
+                stop_container(args[2]);
                 break;
             case 3:
                 list_containers();
@@ -87,7 +91,14 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
                 image = "alp_minifs";
                 create_container(image);
                 break;
+            case 5:
+                response = "Deleting container\n";
+                send(client_socket, response.c_str(), response.length(), 0);
+                delete_container(args[2]);
+                break;
             case 6:
+                response = "Server is shutting down\n";
+                send(client_socket, response.c_str(), response.length(), 0);
                 alive = false;
                 break;
             default:
@@ -134,7 +145,7 @@ void MyDocker::run_container(const std::string& id, int client_socket) {
     running_containers++;
 }
 
-void MyDocker::create_container(std::string& image) {
+void MyDocker::create_container(std::string& image) { // add to json with containers
     bool valid = false;
     for (std::string i : IMAGES) {
         if (i == image) {
@@ -165,3 +176,18 @@ void MyDocker::list_containers() {
     }
 }
 
+void MyDocker::stop_container(const std::string& id) {
+    Container cntnr = containers.at(id);
+    cntnr.stop();
+    std::cout << "Stopped container: " << cntnr.getID() << "\n";
+    running_containers--;
+    close(cntr_pipe[1]);
+}
+
+void MyDocker::delete_container(const std::string& id) {
+    Container cntnr = containers.at(id);
+    cntnr.remove();
+    std::cout << "Deleted container: " << cntnr.getID() << "\n";
+    containers.erase(id);
+    // remove from json with containers
+}

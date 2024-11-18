@@ -21,24 +21,18 @@ private:
     int running_containers = 0;
     std::string baseDirectory;
     std::unordered_map<std::string, Container> containers;
-
 public:
     MyDocker() = default;
-    void start_server(int port);
     void run_server();
+    void start_server(int port);
     void process_command(const std::string& cmd, int client_socket);
 
     void create_container(std::string& image);
-
     void run_container(const std::string& containerID, int client_socket);
-//    void stop_container(const std::string& containerID);
-//    void delete_container(const std::string& containerID);
+    void stop_container(const std::string& id);
     void list_containers();
-
-    ~MyDocker() {
-        close(server_fd);
-    }
-
+    void delete_container(const std::string& id);
+    ~MyDocker() = default;
 };
 
 #endif // MYDOCKER_HPP
