@@ -3,7 +3,7 @@ Authors (team): Zahar Kohut, Serhii Dmytryshyn, Maxym Kutsenko, Bohdan Ozarko<br
 
 ## Prerequisites
 
-g++, cmake
+g++, cmake, boost
 
 ### Compilation
 
@@ -13,37 +13,53 @@ g++, cmake
 
 ### Usage
 
-Create container
+Start server:
+./bin/mydocker2 <port>
+
+Connect to server:
 ```
-./bin/mydocker create <config_path>
+nc localhost <port>
 ```
 
-Delete container and cgroup
+Next commadns are used after connection to server.<br>
+Create container:
 ```
-./bin/mydocker delete <container_id>
-```
-
-Up server
-```
-nx localhost 8080
+mydocker create <config_path>
 ```
 
-Stop server
+Delete container:
 ```
-./bin/mydocker shutdow
-```
-
-List of all active containers
-```
-./bin/mydocker list
+mydocker delete <container_id>
 ```
 
-Run container by id
+Stop server:
 ```
-./bin/mydocker run <container_id>
+mydocker shutdow
 ```
 
-Stop container by id
+List of all available containers:
 ```
-./bin/mydocker stop <container_id>
+mydocker list
 ```
+
+Run container by id:
+```
+mydocker run <container_id>
+```
+After run, container might be used as well as "mydocker" commands are available.<br>
+After run, container must always be stopped. <br>
+Stop container by id:
+```
+mydocker stop <container_id>
+```
+
+### Config file example
+```
+id = 3
+n_pr = 10
+max_memory = 100000
+lclfld = <path>,<path>,...
+image = alp_minifs
+```
+ID and image fields are necessary, other are optional.<br>
+Images available for now are "alp_minifs" and "alp_minifs_extended".
