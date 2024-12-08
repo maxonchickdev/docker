@@ -1,13 +1,15 @@
 #include "mydocker.h"
-#include <boost/algorithm/string.hpp>
-#include "config_parser.h"
-#include <filesystem>
+
 
 void MyDocker::start_server(int port) {
-    struct sockaddr_in addr;
+    struct sockaddr_in addr{};
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         std::cerr << "Error while creating socket" << std::endl;
+    }
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        std::cerr << "Error while setting socket options\n";
     }
 
     addr.sin_family = AF_INET;
@@ -50,12 +52,21 @@ void MyDocker::run_server() {
         }
 
         std::cout << "Client connected: " << client_socket << std::endl;
+        int original_stdout = dup(STDOUT_FILENO);
+        int original_stderr = dup(STDERR_FILENO);
+
+        dup2(client_socket, STDOUT_FILENO);
+        dup2(client_socket, STDERR_FILENO);
 
         while (alive) {
             memset(buff, 0, BUFFER_SIZE);
             ssize_t bytes_read = read(client_socket, buff, BUFFER_SIZE);
 
             if (bytes_read == 0) {
+                dup2(original_stdout, STDOUT_FILENO);
+                dup2(original_stderr, STDERR_FILENO);
+                close(original_stdout);
+                close(original_stderr);
                 std::cout << "Client disconnected" << std::endl;
                 break;
             }
@@ -69,6 +80,7 @@ void MyDocker::run_server() {
         }
         close(client_socket);
     }
+    close(server_fd);
 }
 
 void MyDocker::process_command(const std::string& cmd, int client_socket) {
@@ -79,7 +91,6 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
         std::string response;
         int cmd_no = my_commands[args[1]];
         if (args.size() == 2 && (cmd_no != 3 && cmd_no != 6 && cmd_no != 0)) {
-            //std::cout << "cmd_no " <<cmd_no <<"\n";
             if (cmd_no == 4) {
                 std::cout << "provide config path id " <<"\n";
             } else {
@@ -88,7 +99,6 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
             return;
         }
         else if (args.size() == 3 && args[2].empty() && (cmd_no != 3 && cmd_no != 6 && cmd_no != 0)) {
-            //std::cout << "cmd_no " <<cmd_no <<"\n";
             if (cmd_no == 4) {
                 std::cout << "provide config path " <<"\n";
             } else {
@@ -98,6 +108,11 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
         }
         switch (cmd_no){
             case 1:
+                if (running_containers > 0) {
+                    response = "Another container is running\n";
+                    send(client_socket, response.c_str(), response.length(), 0);
+                    break;
+                }
                 response = "Starting container\n";
                 send(client_socket, response.c_str(), response.length(), 0);
                 run_container(args[2], client_socket);
@@ -111,7 +126,7 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
                 list_containers();
                 break;
             case 4:
-                cfg = args[2];
+                cfg = "images/" + args[2]; // update usage and readme
                 create_container(cfg, true);
                 break;
             case 5:
@@ -120,6 +135,11 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
                 delete_container(args[2]);
                 break;
             case 6:
+                if (running_containers > 0) {
+                    response = "Stop all containers before shutting server down\n";
+                    send(client_socket, response.c_str(), response.length(), 0);
+                    break;
+                }
                 response = "Server is shutting down\n";
                 send(client_socket, response.c_str(), response.length(), 0);
                 alive = false;
@@ -130,25 +150,29 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
                 break;
         }
     } else if (running_containers > 0){
-        int w = write(cntr_pipe[1], (cmd + "\n").c_str(), cmd.length() + 1);
-
+        if (write(cntr_pipe[1], (cmd + "\n").c_str(), cmd.length() + 1) == -1) {
+            std::string msg = "Error while writing into container pipe\n";
+            send(client_socket, msg.c_str(), msg.length(), 0);
+        }
         if (cmd == "exit") {
             close(cntr_pipe[1]);
-            running_containers--; // ADD IN RN and stop
-            std::string msg = "Container stopped.\n";
-            send(client_socket, msg.c_str(), msg.length(), 0);
         }
     } else {
         std::string msg = "No running containers, check usage.\n";
         send(client_socket, msg.c_str(), msg.length(), 0);
-    };
-
+    }
 }
 
 void MyDocker::run_container(const std::string& id, int client_socket) {
     if (!(containers.find(id) != containers.end())) {
         std::string msg = "No such container.\n";
         send(client_socket, msg.c_str(), msg.length(), 0);
+        return;
+    }
+
+    Container& cntnr = containers.at(id);
+    if (cntnr.get_status()) {
+        std::cout << "Container is already running\n";
         return;
     }
 
@@ -159,13 +183,8 @@ void MyDocker::run_container(const std::string& id, int client_socket) {
     }
 
     dup2(cntr_pipe[0], STDIN_FILENO);
-    dup2(client_socket, STDOUT_FILENO);
-    dup2(client_socket, STDERR_FILENO);
-
-    Container cntnr = containers.at(id);
-    std::cout << "Started container: " << cntnr.getID() << "\n";
-    cntnr.run();
     running_containers++;
+    cntnr.run();
 }
 
 void MyDocker::create_container(std::string& cfg, bool is_new) {
@@ -232,13 +251,24 @@ void MyDocker::create_container(std::string& cfg, bool is_new) {
 
 void MyDocker::list_containers() {
     std::cout << "Your containers: \n";
+    std::cout << std::left;
+    std::cout << std::setw(10) << "ID"
+              << std::setw(10) << "Status"
+              << std::setw(20) << "Image" << '\n';
+
     for (auto& [id, container] : containers) {
-        std::cout << "Container id: " << id << std::endl;
+        std::cout << std::setw(10) << id
+                  << std::setw(10) << container.get_status()
+                  << std::setw(20) << container.get_img() << '\n';
     }
 }
 
 void MyDocker::stop_container(const std::string& id) {
-    Container cntnr = containers.at(id);
+    Container& cntnr = containers.at(id);
+    if (!cntnr.get_status()) {
+        std::cout << "Container is not running\n";
+        return;
+    }
     cntnr.stop();
     std::cout << "Stopped container: " << cntnr.getID() << "\n";
     running_containers--;
