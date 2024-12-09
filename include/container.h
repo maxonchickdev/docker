@@ -19,7 +19,10 @@
 #include <cerrno>
 #include <utility>
 #include <csignal>
-
+#include <boost/algorithm/string.hpp>
+#include "config_parser.h"
+#include <filesystem>
+#include <iomanip>
 
 #define STACK_SIZE (1024 * 1024)
 #define CG_PATH "/sys/fs/cgroup"
@@ -81,6 +84,7 @@ public:
     [[nodiscard]] std::string getID() const;
     [[nodiscard]] pid_t get_PID() const;
     [[nodiscard]] bool get_status() const;
+    [[nodiscard]] std::string get_img() const;
 };
 
 #endif // CONTAINER_HPP

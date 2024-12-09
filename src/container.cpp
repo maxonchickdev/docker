@@ -61,16 +61,14 @@ int Container::spawn_process(int (*commproc)(void *), void *arg_for_commproc) {
 }
 
 Container::Container(std::string id, bool is_new, std::vector<std::string> local_folders, std::string num_of_procs, std::string max_memory, std::string img):
-containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), max_memory(std::move(max_memory)), isRunning(true), local_folders(std::move(local_folders)), img(std::move(img)) {
+containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), max_memory(std::move(max_memory)), isRunning(false), local_folders(std::move(local_folders)), img(std::move(img)) {
     if (pipe(p_fd) == -1) {
         std::cerr << "Failed to create pipe!" << '\n';
         exit(1);
     }
     if (is_new) {
-        isRunning = false;
         initialize();
     } else {
-        isRunning = false;
         sources_path = std::string(MNT_PATH) + "/" + containerID;
         cgroup_path = std::string(CG_PATH) + "/" + containerID;
     }
@@ -136,6 +134,7 @@ void Container::stop() {
         pids.push_back(static_cast<pid_t>(std::stol(line)));
     }
     procs.close();
+    isRunning = false;
 
     for (pid_t pid : pids) {
         if (kill(pid, SIGKILL) != 0) {
@@ -173,4 +172,8 @@ pid_t Container::get_PID() const {
 
 bool Container::get_status() const {
     return isRunning;
+}
+
+std::string Container::get_img() const {
+    return img;
 }

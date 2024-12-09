@@ -3,3 +3,6 @@ alpine-keys
 apk-tools
 busybox
 libc-utils
+nano
+py3-pip
+python3

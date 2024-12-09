@@ -14,8 +14,10 @@ g++, cmake, boost
 ### Usage
 
 Start server:
-./bin/mydocker2 <port>
-
+```
+sudo ./bin/mydocker2 <port>
+```
+<mark>sudo is important! it is necessary for cgroups to work. <br></mark>
 Connect to server:
 ```
 nc localhost <port>
@@ -57,9 +59,10 @@ mydocker stop <container_id>
 ```
 id = 3
 n_pr = 10
-max_memory = 100000
+max_memory = 10000000
 lclfld = <path>,<path>,...
 image = alp_minifs
 ```
 ID and image fields are necessary, other are optional.<br>
-Images available for now are "alp_minifs" and "alp_minifs_extended".
+Images available for now are "alp_minifs" and "alp_minifs_extended".<br>
+It is better to avoid very low memory limits (<1MB) to avoid any unwanted behaviour. 
