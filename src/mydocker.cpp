@@ -154,7 +154,7 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
             std::string msg = "Error while writing into container pipe\n";
             send(client_socket, msg.c_str(), msg.length(), 0);
         }
-        std::string pcwd = "echo $(pwd):~$ ' ' | tr -d '\n'";
+        std::string pcwd = "echo -e \"\\033[34m$(pwd):~$\\033[0m\" ' ' | tr -d '\n'";
         if (write(cntr_pipe[1], (pcwd + "\n").c_str(), pcwd.length() + 1) == -1) {
             std::string msg = "Error while writing into container pipe\n";
             send(client_socket, msg.c_str(), msg.length(), 0);
@@ -263,7 +263,7 @@ void MyDocker::list_containers() {
 
     for (auto& [id, container] : containers) {
         std::cout << std::setw(10) << id
-                  << std::setw(10) << container.get_status()
+                  << std::setw(10) << (container.get_status() ? "Running" : "Stopped")
                   << std::setw(20) << container.get_img() << '\n';
     }
 }

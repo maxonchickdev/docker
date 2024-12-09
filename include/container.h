@@ -26,7 +26,7 @@
 
 #define STACK_SIZE (1024 * 1024)
 #define CG_PATH "/sys/fs/cgroup"
-#define IMAGES {"alp_minifs", "alp_minifs_extend"}
+#define IMAGES {"alp_minifs", "alp_minifs_extend", "py_alp"}
 #define MAX_PAYLOAD 1024
 
 class Container {
