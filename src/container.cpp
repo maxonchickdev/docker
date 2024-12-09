@@ -111,7 +111,6 @@ void Container::run() {
         std::cerr << "Failed to close writing end of pipe in parent!" << '\n';
         exit(1);
     }
-
 }
 
 
@@ -151,7 +150,6 @@ void Container::remove() {
 
     rmdir(pth1.c_str());
 
-    // change it
     if (!system(cmd2.c_str())) {
 //        std::cerr << "Failed delete container wtih ID: " << containerID << ". " << strerror(errno) << '\n';
     }

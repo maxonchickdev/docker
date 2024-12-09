@@ -126,7 +126,7 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
                 list_containers();
                 break;
             case 4:
-                cfg = "images/" + args[2]; // update usage and readme
+                cfg = args[2];
                 create_container(cfg, true);
                 break;
             case 5:
@@ -151,6 +151,11 @@ void MyDocker::process_command(const std::string& cmd, int client_socket) {
         }
     } else if (running_containers > 0){
         if (write(cntr_pipe[1], (cmd + "\n").c_str(), cmd.length() + 1) == -1) {
+            std::string msg = "Error while writing into container pipe\n";
+            send(client_socket, msg.c_str(), msg.length(), 0);
+        }
+        std::string pcwd = "echo $(pwd):~$ ' ' | tr -d '\n'";
+        if (write(cntr_pipe[1], (pcwd + "\n").c_str(), pcwd.length() + 1) == -1) {
             std::string msg = "Error while writing into container pipe\n";
             send(client_socket, msg.c_str(), msg.length(), 0);
         }
@@ -264,9 +269,13 @@ void MyDocker::list_containers() {
 }
 
 void MyDocker::stop_container(const std::string& id) {
+    if (containers.find(id) == containers.end()) {
+        std::cerr << "No such container\n";
+        return;
+    }
     Container& cntnr = containers.at(id);
     if (!cntnr.get_status()) {
-        std::cout << "Container is not running\n";
+        std::cerr << "Container is not running\n";
         return;
     }
     cntnr.stop();
@@ -276,6 +285,10 @@ void MyDocker::stop_container(const std::string& id) {
 }
 
 void MyDocker::delete_container(const std::string& id) {
+    if (containers.find(id) == containers.end()) {
+        std::cerr << "No such container\n";
+        return;
+    }
     Container cntnr = containers.at(id);
     std::string cfg = std::string(TEMPLATE_PATH) + "/meta/" + id + ".cfg";
     if (std::remove(cfg.c_str()) != 0) {
