@@ -56,7 +56,7 @@ int Container::command_process(void* arg) {
 
 int Container::spawn_process(int (*commproc)(void *), void *arg_for_commproc) {
     auto stack = create_stack();
-    int clone_flags = SIGCHLD | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWUTS;
+    int clone_flags = SIGCHLD | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWUTS | CLONE_NEWNET;
     return clone(commproc, stack, clone_flags, arg_for_commproc);
 }
 
@@ -75,6 +75,10 @@ containerID(std::move(id)), num_of_procs(std::move(num_of_procs)), max_memory(st
 }
 
 void Container::run() {
+    if (system("ip link del veth0") != 0 && errno != ENOENT) {
+        std::cerr << "Failed to delete VETH device veth0: " << strerror(errno) << '\n';
+        exit(1);
+    };
     if (pipe(p_fd) == -1) {
         std::cerr << "Failed to create pipe!" << '\n';
         exit(1);
@@ -93,6 +97,7 @@ void Container::run() {
     cntr_pid = comm_pid;
     int user_id = 1000;
     setup_user_ns(user_id, comm_pid);
+    setup_netns(comm_pid);
 
     if (close(p_fd[0]) == -1) {
         std::cerr << "Failed to close reading end of pipe in parent!" << '\n';
@@ -118,7 +123,7 @@ void Container::run() {
 void Container::stop() {
     std::string line;
     std::vector<pid_t> pids;
-    std::ifstream procs(CG_PATH "/" +containerID + "/cgroup.procs");
+    std::ifstream procs(CG_PATH "/" + containerID + "/cgroup.procs");
 
     if (!procs.is_open()) {
         std::cerr << "Failed to open /cgroup.procs" << std::endl;
